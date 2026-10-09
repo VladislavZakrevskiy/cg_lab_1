@@ -109,7 +109,7 @@ bool createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, Buffer& buffer) {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = size, .usage = usage, .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
-    // ponytail: host-visible buffers suit 12 vertices; use staging for large meshes.
+
     const VmaAllocationCreateInfo allocation = {
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO,
@@ -333,7 +333,7 @@ void render(const graphics::internal::FrameData& fd) {
         projectionMatrix(scene, static_cast<float>(extent.width) / static_cast<float>(extent.height)),
         glm::vec4(scene.color, 1.0f),
     };
-    // prepare() has already waited for the previous frame to finish reading this UBO.
+
     if (!upload(uniformBuffer, &uniform, sizeof(uniform))) throw std::runtime_error("Uniform upload failed");
     const auto cmd = fd.command_buffer;
     if (!check(vkResetCommandBuffer(cmd, 0), "vkResetCommandBuffer")) throw std::runtime_error("Command buffer reset failed");
