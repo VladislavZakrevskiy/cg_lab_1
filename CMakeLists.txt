@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 include(FetchContent)
 
-project(vulkan-starter-app LANGUAGES C CXX)
+project(cg-lab1 LANGUAGES C CXX)
 
 add_executable(${PROJECT_NAME} source/main.cpp source/graphics_internal.cpp source/application.cpp)
 
@@ -23,6 +23,7 @@ else()
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD_REQUIRED TRUE CXX_STANDARD 20)
+target_compile_definitions(${PROJECT_NAME} PRIVATE GLM_FORCE_DEPTH_ZERO_TO_ONE GLM_FORCE_RADIANS)
 
 FetchContent_Declare(
 	glfw
@@ -48,6 +49,7 @@ FetchContent_Declare(
 	GIT_TAG v1.92.9
 )
 
+FetchContent_Declare(glm GIT_REPOSITORY https://github.com/g-truc/glm.git GIT_TAG 1.0.1)
 find_package(Vulkan REQUIRED)
 
 set(GLFW_LIBRARY_TYPE STATIC)
@@ -60,13 +62,18 @@ FetchContent_MakeAvailable(
 	vk-bootstrap
 	VulkanMemoryAllocator
 	imgui
+	glm
 )
+
+get_target_property(VMA_INCLUDE_DIRS VulkanMemoryAllocator INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${VMA_INCLUDE_DIRS})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 	glfw
 	Vulkan::Vulkan
 	vk-bootstrap::vk-bootstrap
 	GPUOpen::VulkanMemoryAllocator
+	glm::glm
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
@@ -80,32 +87,23 @@ target_sources(${PROJECT_NAME} PRIVATE
 	${imgui_SOURCE_DIR}/imgui_demo.cpp
 )
 
-# Compile shaders
-find_program(GLSLC_FOUND glslc)
-if(GLSLC_FOUND)
-	set(_SHADER_BINARIES)
+find_program(GLSLC glslc HINTS "$ENV{VULKAN_SDK}/bin" REQUIRED)
+set(SHADER_DIR "${CMAKE_CURRENT_BINARY_DIR}/shaders")
+file(MAKE_DIRECTORY "${SHADER_DIR}")
+foreach(SHADER IN ITEMS icosahedron.vert icosahedron.frag)
+    set(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/shaders/${SHADER}")
+    set(BINARY "${SHADER_DIR}/${SHADER}.spv")
+    add_custom_command(
+        OUTPUT "${BINARY}"
+        COMMAND "${GLSLC}" --target-env=vulkan1.1 "${SOURCE}" -o "${BINARY}"
+        DEPENDS "${SOURCE}"
+        VERBATIM
+    )
+    list(APPEND SHADER_BINARIES "${BINARY}")
+endforeach()
+add_custom_target(shaders DEPENDS ${SHADER_BINARIES})
+add_dependencies(${PROJECT_NAME} shaders)
+target_compile_definitions(${PROJECT_NAME} PRIVATE LAB1_SHADER_DIR="${SHADER_DIR}")
 
-	macro(compile_shader SHADER_FILE)
-		set(SHADER_SOURCE ${CMAKE_SOURCE_DIR}/shaders/${SHADER_FILE})
-		set(SHADER_BINARY ${SHADER_FILE}.spv)
-		set(SHADER_BINARY_PATH ${CMAKE_SOURCE_DIR}/shaders/${SHADER_BINARY})
-
-		add_custom_command(
-			OUTPUT ${SHADER_BINARY_PATH}
-			COMMAND glslc ${SHADER_SOURCE} -o ${SHADER_BINARY_PATH}
-			DEPENDS ${SHADER_SOURCE}
-			COMMENT "Compiling ${SHADER_FILE} shader"
-		)
-
-		list(APPEND _SHADER_BINARIES ${SHADER_BINARY_PATH})
-	endmacro()
-
-	# To compile shader file, use compile_shader function with a file name
-	# of a shader inside shaders directory. See example below:
-
-	# compile_shader(example.vert)
-	# compile_shader(example.frag)
-
-	add_custom_target(shaders DEPENDS ${_SHADER_BINARIES})
-	add_dependencies(${PROJECT_NAME} shaders)
-endif()
+enable_testing()
+add_test(NAME lab1-self-test COMMAND ${PROJECT_NAME} --self-test)

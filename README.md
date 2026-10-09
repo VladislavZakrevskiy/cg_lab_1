@@ -1,66 +1,99 @@
-# 🌋 Vulkan Starter App
+# Лабораторная №1 — основы 3D-графики
 
-## Getting started
+**Вариант 11: правильный икосаэдр.** C++20, Vulkan, GLFW, ImGui.
+Выполнены первые пять дополнительных заданий из [условия](CG%20Lab%20%231.pdf):
 
-You need C++ compiler, Vulkan SDK and CMake installed before you can build this project.
+1. Перспективная и ортографическая проекции.
+2. Перемещение, поворот и масштабирование по трём осям.
+3. Пространственная анимация с паузой, скоростью и радиусом траектории.
+4. Выбор базового цвета.
+5. Процедурные цвета вершин, умножаемые на базовый цвет.
 
-This project uses C++20 standard and thus requires either of those compilers:
-- GCC 10.X
-- Clang 10
-- Microsoft Visual Studio 2019
+Икосаэдр имеет 12 вершин, 30 рёбер и 20 треугольных граней. Камера фиксирована.
 
-This is officially tested on *Windows* and *GNU/Linux platforms*, no *macOS* support yet.
-If you have a working macOS solution of this code, consider submitting a PR so others
-can build this example code without a hassle!
+## Сборка на macOS
 
-<ins>**1. Downloading the repository**</ins>
+Нужны CMake ≥ 3.20, Command Line Tools с C++20 и [Vulkan SDK](https://vulkan.lunarg.com/sdk/home).
+SDK включает MoltenVK, компилятор шейдеров `glslc` и слои проверки Vulkan. Локальный SDK находится
+в `.local/vulkan-sdk`; эта папка не попадает в Git.
 
-Start by cloning the repository with `git clone --depth 1 https://github.com/vladeemerr/vulkan-starter-app`
+Из корня проекта:
 
-This repository does not contain any submodules, it utilizes CMake's `FetchContent` feature instead.
-
-<ins>**2. Configuring the project**</ins>
-
-Run either one of the CMake lines to download dependencies and configure the project:
-
-```bash
-cmake --preset debug       # for GNU/Linux (GCC/Clang)
-cmake --preset msvc-debug  # for Windows (Visual Studio 2019)
-cmake --preset mingw-debug # for Windows (MinGW)
+```sh
+source ./env.sh
+cmake --preset debug
+cmake --build build-debug --parallel
+./build-debug/cg-lab1
 ```
 
-If you wish to build in `release` mode, change `debug` to `release`.
+Если SDK установлен в другом месте, сначала укажи путь к его каталогу `macOS`:
 
-If changes are made (added/removed files), or if you want to regenerate project files, rerun the command above.
-
-<ins>**3. Building**</ins>
-
-To build the project, use the line below. You are most likely using `debug` preset, so
-the directory that will eventually contain your build files is named `build-debug`.
-
-Likewise for `release` that directory will be named `build-release`
-
-Run one those commands, depending on which preset you chose:
-
-```bash
-cmake --build build-debug --parallel # for debug
-cmake --build build-release --parallel # for release
+```sh
+export VULKAN_SDK="$HOME/VulkanSDK/1.4.321.0/macOS"
+source ./env.sh
 ```
 
-### Running
+`env.sh` нужно выполнять через `source` в том же терминале, где собираешь и запускаешь приложение.
+Первая конфигурация скачивает закреплённые версии GLFW, vk-bootstrap, VMA, ImGui и GLM.
+Шейдеры автоматически компилируются в `build-debug/shaders`.
+Путь к ним задаёт CMake: после сборки запуск не зависит от текущей рабочей папки.
+При переносе каталога проекта пересобери приложение.
 
-`build-*` directory will contain the executable in one of the subdirectories after successful build.
+## Другие платформы
 
-For `msvc-{debug|release}` builds output subdirectory is set to `Debug` or `Release` respectively.
-For other configurations output subdirectory is set to `vulkan-starter-app`.
+На Linux установи заголовочные файлы и загрузчик Vulkan, слои проверки и `glslc`, затем используй
+те же команды CMake без `env.sh`. На Ubuntu пакеты называются `libvulkan-dev`,
+`vulkan-validationlayers`, `glslc`; для GLFW также нужны пакеты разработки выбранного
+оконного окружения X11/Wayland.
 
-**Make sure your working directory is set to the project root!**
-Project root is where this README file resides. Otherwise, the
-code responsible for loading shaders or other resources from files will fail,
-because relative paths are used.
+На Windows установи Vulkan SDK и Visual Studio 2022 с компонентами C++:
 
-### Compiling shaders
+```powershell
+cmake --preset msvc-debug
+cmake --build build-debug --config Debug --parallel
+.\build-debug\Debug\cg-lab1.exe
+```
 
-`CMakeLists.txt` has a build recipe for compiling shader files
-along with an application. Look for a comment in this file to see
-how to compile your shaders.
+Не смешивай разные генераторы CMake в одном каталоге сборки.
+Проверки выполнения проведены на macOS; Windows/Linux требуют проверки на соответствующей машине.
+
+## Управление
+
+| Элемент | Действие |
+| --- | --- |
+| Perspective | Переключение проекции |
+| FOV / Ortho half-height | Угол обзора / половина высоты области видимости |
+| Position | Перемещение, добавляемое к смещению анимации |
+| Rotation (degrees) | Повороты вокруг X, Y и Z в градусах |
+| Scale | Положительный масштаб по каждой оси |
+| Play / Pause | Запуск / заморозка фазы анимации |
+| Speed / Path radius | Скорость изменения фазы / размер траектории |
+| Base color | Множитель процедурного RGB-цвета |
+| Reset all | Исходные параметры и остановка анимации |
+| Escape | Выход |
+
+Стартовая сцена неподвижна. При первом Play объект выходит на траекторию вокруг
+начальной позиции; Pause сохраняет текущее смещение. Изменение радиуса на паузе
+применяется при возобновлении. Ручные перемещение, поворот и масштаб работают также на паузе.
+
+## Проверки
+
+```sh
+source ./env.sh
+ctest --test-dir build-debug --output-on-failure
+./build-debug/cg-lab1 --smoke-test
+```
+
+`--self-test` проверяет геометрию и математику без окна и инициализации Vulkan.
+`--smoke-test` рисует 240 кадров, переключает настройки сцены, меняет размер окна,
+сворачивает/восстанавливает его и завершает работу с освобождением ресурсов.
+Успех определяется кодом выхода 0; сообщения слоёв проверки Vulkan нужно читать отдельно.
+
+## Основа
+
+[Шаблон преподавателя](https://github.com/vladeemerr/vulkan-starter-app), commit
+`7049a07b14f3f0deae7c9c0d3754bee88f876df0`; лицензия Apache-2.0 и NOTICE сохранены.
+[Пример лабы](https://github.com/Vlandenburg/CG) использован для сравнения подхода.
+Основной код находится в `source/application.cpp`, шейдеры — в `shaders/`.
+Локальные материалы для подготовки к защите находятся в `docs/` и исключены из Git.
+В них есть объяснения по-русски, рисунки, формулы LaTeX для Obsidian и вопросы с ответами.

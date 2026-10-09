@@ -4,7 +4,7 @@
 		{
 			"name": "common",
 			"hidden": true,
-			"generator": "Ninja",
+			"generator": "Unix Makefiles",
 			"cacheVariables": {}
 		},
 		{
