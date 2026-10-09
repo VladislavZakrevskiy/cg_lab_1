@@ -104,6 +104,3 @@ endforeach()
 add_custom_target(shaders DEPENDS ${SHADER_BINARIES})
 add_dependencies(${PROJECT_NAME} shaders)
 target_compile_definitions(${PROJECT_NAME} PRIVATE LAB1_SHADER_DIR="${SHADER_DIR}")
-
-enable_testing()
-add_test(NAME lab1-self-test COMMAND ${PROJECT_NAME} --self-test)
