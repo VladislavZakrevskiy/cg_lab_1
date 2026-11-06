@@ -1,0 +1,14 @@
+# Local learning notes and generated documentation
+*.[mM][dD]
+docs/
+
+# Build output and local dependencies
+build*/
+.local/
+CMakeFiles/
+CMakeCache.txt
+*.spv
+
+# Local application and OS state
+imgui.ini
+.DS_Store
